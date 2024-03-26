@@ -1,0 +1,161 @@
+import pygame
+import sys
+import random
+
+# Inicialización de Pygame
+pygame.init()
+
+# Definición de colores
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+# Definición de la pantalla
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+WIDTH, HEIGHT = screen.get_width(), screen.get_height()
+pygame.display.set_caption("Seleccionar Personaje")
+
+# Definición de la fuente
+font = pygame.font.Font(None, 36)
+
+# Función para cargar imágenes de personajes sin fondo y redimensionarlas
+def load_image(filename, width, height):
+    try:
+        image = pygame.image.load(filename)
+        image = pygame.transform.scale(image, (width, height))  # Redimensiona la imagen
+        image = image.convert_alpha()  # Convierte la imagen al formato interno de Pygame
+        return image
+    except pygame.error as message:
+        print("No se pudo cargar la imagen:", filename)
+        raise SystemExit(message)
+
+# Carga de imágenes de personajes sin fondo y redimensionadas
+goku_img = load_image("goku.png", 174, 277)
+freezer_img = load_image("freezer.png", 174, 277)
+vegeta_img = load_image("vegeta.png", 174, 277)
+piccolo_img = load_image("piccolo.png", 174, 277)
+majinboo_img = load_image("majin-boo.png", 174, 277)
+cell_img = load_image("cell.png", 174, 277)
+
+# Función para mostrar el menú de selección de personaje
+def select_character():
+    screen.fill(WHITE)
+    text = font.render("Selecciona un personaje:", True, BLACK)
+    text_rect = text.get_rect(center=(WIDTH // 2, 50))
+    screen.blit(text, text_rect)
+
+    # Dibuja imágenes de personajes
+    characters = [(goku_img, "Goku"), (freezer_img, "Freezer"), (vegeta_img, "Vegeta"),
+                  (piccolo_img, "Piccolo"), (majinboo_img, "Majin-Boo"), (cell_img, "Cell")]
+
+    section_width = WIDTH // 3
+    section_height = HEIGHT // 2
+    char_width, char_height = goku_img.get_width(), goku_img.get_height()
+    for i, (char_img, _) in enumerate(characters):
+        x = (i % 3) * section_width + (section_width - char_width) // 2
+        y = (i // 3) * section_height + (section_height - char_height) // 2 + 50
+        screen.blit(char_img, (x, y))
+
+    pygame.display.flip()
+
+    # Loop para la selección del personaje
+    selected_character = None
+    while not selected_character:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                for i, (_, char_name) in enumerate(characters):
+                    x = (i % 3) * section_width + (section_width - char_width) // 2
+                    y = (i // 3) * section_height + (section_height - char_height) // 2 + 50
+                    char_rect = pygame.Rect(x, y, char_width, char_height)
+                    if char_rect.collidepoint(mouse_pos):
+                        selected_character = char_name.lower()
+                        break
+
+    return selected_character
+
+# Clase para representar los personajes
+class Character:
+    def __init__(self, name, health):
+        self.name = name
+        self.health = health
+
+    def take_damage(self, damage):
+        self.health -= damage
+
+    def is_alive(self):
+        return self.health > 0
+
+# Función para realizar una ronda de combate
+def combat_round(player_choice, opponent_choice):
+    if player_choice == opponent_choice:
+        return True  # El jugador acertó y dañó al oponente
+    else:
+        return False  # El jugador falló y no infligió daño
+
+# Función principal del juego
+def main():
+    character_name = select_character()
+    if character_name:
+        player = Character(character_name.capitalize(), 100)
+    else:
+        pygame.quit()
+        sys.exit()
+
+    opponent = Character("Oponente", 100)
+
+    clock = pygame.time.Clock()
+    running = True
+
+    while running:
+        screen.fill(WHITE)
+
+        # Eventos de teclado
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1:
+                    player_choice = 1
+                elif event.key == pygame.K_2:
+                    player_choice = 2
+                elif event.key == pygame.K_3:
+                    player_choice = 3
+
+                    # El oponente elige un número aleatorio
+                    opponent_choice = random.randint(1, 3)
+
+                    # Realizar la ronda de combate
+                    if combat_round(player_choice, opponent_choice):
+                        opponent.take_damage(10)
+                    else:
+                        player.take_damage(10)
+
+        # Renderizar texto en la pantalla
+        player_text = font.render(f"{player.name}: {player.health} HP", True, BLACK)
+        opponent_text = font.render(f"{opponent.name}: {opponent.health} HP", True, BLACK)
+        instruction_text = font.render("Elige un número del 1 al 3 para atacar.", True, BLACK)
+
+        screen.blit(player_text, (50, 50))
+        screen.blit(opponent_text, (50, 100))
+        screen.blit(instruction_text, (50, 150))
+
+        # Verificar si la vida del oponente llegó a 0
+        if opponent.health <= 0:
+            game_over_text = font.render("¡Has ganado!", True, BLACK)
+            game_over_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(game_over_text, game_over_rect)
+            pygame.display.flip()
+            pygame.time.wait(3000)  # Esperar 3 segundos antes de salir del juego
+            break
+
+        pygame.display.flip()
+        clock.tick(30)
+
+    pygame.quit()
+    sys.exit()
+
+if __name__ == "__main__":
+    main()
